@@ -3,6 +3,7 @@ import express from "express";
 import articleRoutes from "./routes/articleRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.get("/", (_, res) => res.json({ info: "TemanTumbuh Backend API" }));
 app.use("/articles", articleRoutes);
 app.use("/auth", authRoutes);
 app.use("/api/v1/posts", postRoutes);
+app.use("/api/users", userRoutes);
 
 // Global error handler (harus 4 argumen)
 // eslint-disable-next-line no-unused-vars

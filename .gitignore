@@ -144,4 +144,7 @@ dist
 # Product Requirement Documents
 PRD-Ramen/
 
+# AI
+agent
+
 # End of https://www.toptal.com/developers/gitignore/api/node
