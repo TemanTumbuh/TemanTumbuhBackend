@@ -1,99 +1,111 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import UserModel from "../models/userModel.js";
+import AuthService from "../services/authService.js";
+
+const OAUTH_STATE_COOKIE = "oauth_state";
+const isProd = process.env.NODE_ENV === "production";
 
 class AuthController {
-  // Register user
-  static async register(req, res) {
-    try {
-      const { username, email, kata_sandi, ulangi_kata_sandi } = req.body;
-
-      // Validasi input
-      if (!username || !email || !kata_sandi || !ulangi_kata_sandi) {
-        return res.status(400).json({ error: "Semua field harus diisi" });
-      }
-
-      if (kata_sandi !== ulangi_kata_sandi) {
-        return res.status(400).json({ error: "Kata sandi tidak cocok" });
-      }
-
-      // Cek apakah email sudah terdaftar
-      const existingUser = await UserModel.findByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ error: "Email sudah terdaftar" });
-      }
-
-      // Hash password
-      const saltRounds = 10;
-      const password_hash = await bcrypt.hash(kata_sandi, saltRounds);
-
-      // Buat user baru
-      const newUser = await UserModel.create({
-        username,
-        email,
-        password_hash,
-      });
-
-      // Buat JWT token
-      const token = jwt.sign(
-        { id: newUser.id, email: newUser.email },
-        process.env.JWT_SECRET || "default_secret",
-        { expiresIn: "1h" }
-      );
-
-      res.status(201).json({
-        message: "Registrasi berhasil",
-        user: { id: newUser.id, username: newUser.username, email: newUser.email },
-        token,
-      });
-    } catch (error) {
-      console.error("Error registering user:", error);
-      res.status(500).json({ error: "Terjadi kesalahan server" });
+    // POST /auth/register
+    static async register(req, res) {
+        try {
+            const { username, email, password, confirmPassword } = req.body;
+            const result = await AuthService.register({ username, email, password, confirmPassword });
+            return res.status(201).json({ success: true, message: "Registrasi berhasil.", data: result });
+        } catch (err) {
+            return res.status(err.status ?? 500).json({ success: false, message: err.message ?? "Terjadi kesalahan server." });
+        }
     }
-  }
 
-  // Login user
-  static async login(req, res) {
-    try {
-      const { email, kata_sandi } = req.body;
-
-      // Validasi input
-      if (!email || !kata_sandi) {
-        return res.status(400).json({ error: "Email dan kata sandi harus diisi" });
-      }
-
-      // Cari user berdasarkan email
-      const user = await UserModel.findByEmail(email);
-      if (!user) {
-        return res.status(401).json({ error: "Email atau kata sandi salah" });
-      }
-
-      // Verifikasi password
-      const isPasswordValid = await bcrypt.compare(kata_sandi, user.password_hash);
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: "Email atau kata sandi salah" });
-      }
-
-      // Update last_login
-      await UserModel.updateLastLogin(user.id);
-
-      // Buat JWT token
-      const token = jwt.sign(
-        { id: user.id, email: user.email },
-        process.env.JWT_SECRET || "default_secret",
-        { expiresIn: "1h" }
-      );
-
-      res.json({
-        message: "Login berhasil",
-        user: { id: user.id, username: user.username, email: user.email },
-        token,
-      });
-    } catch (error) {
-      console.error("Error logging in user:", error);
-      res.status(500).json({ error: "Terjadi kesalahan server" });
+    // POST /auth/login
+    static async login(req, res) {
+        try {
+            const { email, password } = req.body;
+            const result = await AuthService.login({ email, password });
+            return res.status(200).json({ success: true, message: "Login berhasil.", data: result });
+        } catch (err) {
+            return res.status(err.status ?? 500).json({ success: false, message: err.message ?? "Terjadi kesalahan server." });
+        }
     }
-  }
+
+    // POST /auth/refresh
+    static async refresh(req, res) {
+        try {
+            const { refreshToken } = req.body;
+            const result = await AuthService.refresh(refreshToken);
+            return res.status(200).json({ success: true, data: result });
+        } catch (err) {
+            return res.status(err.status ?? 500).json({ success: false, message: err.message ?? "Terjadi kesalahan server." });
+        }
+    }
+
+    // POST /auth/logout
+    static async logout(req, res) {
+        try {
+            const { refreshToken } = req.body;
+            await AuthService.logout(refreshToken);
+            return res.status(200).json({ success: true, message: "Logout berhasil." });
+        } catch (err) {
+            return res.status(err.status ?? 500).json({ success: false, message: err.message ?? "Terjadi kesalahan server." });
+        }
+    }
+
+    // GET /auth/me
+    static async me(req, res) {
+        try {
+            const user = await AuthService.me(req.user.id);
+            return res.status(200).json({ success: true, data: user });
+        } catch (err) {
+            return res.status(err.status ?? 500).json({ success: false, message: err.message ?? "Terjadi kesalahan server." });
+        }
+    }
+
+    // GET /auth/google
+    static async googleRedirect(req, res) {
+        const state = AuthService.generateOAuthState();
+
+        res.cookie(OAUTH_STATE_COOKIE, state, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: "lax",
+            maxAge: 5 * 60 * 1000, // 5 menit
+        });
+
+        const consentUrl = AuthService.getGoogleConsentUrl(state);
+        return res.redirect(302, consentUrl);
+    }
+
+    // GET /auth/callback
+    static async googleCallback(req, res) {
+        const frontendUrl = process.env.FRONTEND_REDIRECT_URL;
+        const cookieState = req.cookies?.[OAUTH_STATE_COOKIE];
+        res.clearCookie(OAUTH_STATE_COOKIE);
+
+        try {
+            const { code, state } = req.query;
+
+            if (!AuthService.verifyOAuthState(cookieState, state)) {
+                const err = new Error("State tidak valid, kemungkinan permintaan CSRF.");
+                err.status = 401;
+                throw err;
+            }
+
+            const { exchangeCode } = await AuthService.handleGoogleCallback(code);
+            return res.redirect(302, `${frontendUrl}?code=${encodeURIComponent(exchangeCode)}`);
+        } catch (err) {
+            const message = encodeURIComponent(err.message ?? "Login Google gagal.");
+            return res.redirect(302, `${frontendUrl}?error=${message}`);
+        }
+    }
+
+    // POST /auth/exchange
+    static async exchange(req, res) {
+        try {
+            const { code } = req.body;
+            const result = await AuthService.exchangeCode(code);
+            return res.status(200).json({ success: true, data: result });
+        } catch (err) {
+            return res.status(err.status ?? 500).json({ success: false, message: err.message ?? "Terjadi kesalahan server." });
+        }
+    }
 }
 
 export default AuthController;

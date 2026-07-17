@@ -22,6 +22,76 @@ function formatUser(row) {
 }
 
 const UserService = {
+    // Dipakai oleh authService - lookup user by email TERMASUK password_hash/provider.
+    // (UserModel.findByEmail sudah select("*"), tapi diekspos ulang di sini secara eksplisit
+    // supaya authService tidak perlu import UserModel langsung - satu pintu masuk data user.)
+    async findByEmailRaw(email) {
+        return UserModel.findByEmail(email);
+    },
+
+    // Dipakai oleh authService (Google callback) - lookup by (provider, provider_id).
+    async findByProviderAndProviderId(provider, providerId) {
+        return UserModel.findByProviderAndProviderId(provider, providerId);
+    },
+
+    // Dipakai oleh authService untuk ambil user by id TERMASUK password_hash (mis. saat /auth/me
+    // butuh cek provider, atau alur internal lain). Controller publik tetap pakai getUserById().
+    async findByIdRaw(id) {
+        return UserModel.findById(id);
+    },
+
+    // Registrasi user baru (provider='local', dipanggil dari authService.register).
+    // Password hashing tetap tanggung jawab authService (User Management tidak tahu soal
+    // kata_sandi mentah), tapi UNIQUE-check + insert tetap lewat sini - satu-satunya jalur create.
+    async createLocalUser({ username, email, password_hash }) {
+        const existing = await UserModel.findByEmail(email);
+        if (existing) {
+            const err = new Error("Email sudah terdaftar.");
+            err.status = 409;
+            throw err;
+        }
+
+        try {
+            const user = await UserModel.create({
+                username,
+                email,
+                password_hash,
+                provider: "local",
+            });
+            return user;
+        } catch (error) {
+            if (error.code === "23505") {
+                const err = new Error("username atau email sudah digunakan.");
+                err.status = 409;
+                throw err;
+            }
+            throw error;
+        }
+    },
+
+    // Auto-provisioning untuk Google SSO (dipanggil dari authService saat callback,
+    // user belum pernah login dengan provider ini dan emailnya belum terdaftar sama sekali).
+    async createGoogleUser({ username, email, providerId, avatarUrl }) {
+        try {
+            const user = await UserModel.create({
+                username,
+                email,
+                password_hash: null,
+                provider: "google",
+                provider_id: providerId,
+                avatar_url: avatarUrl ?? null,
+            });
+            return user;
+        } catch (error) {
+            if (error.code === "23505") {
+                const err = new Error("username sudah digunakan.");
+                err.status = 409;
+                throw err;
+            }
+            throw error;
+        }
+    },
+
     // GET /api/users - list dengan pagination, search, sort.
     async listUsers({ page, limit, order, orderBy, search, searchBy, includeInactive }) {
         const parsedPage = Math.max(parseInt(page) || 0, 0);

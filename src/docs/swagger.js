@@ -62,6 +62,61 @@ const errorResponseComponent = {
     },
 };
 
+// Mirrors formatPost() in postService.js.
+const postComponent = {
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid" },
+        content: { type: "string", nullable: true },
+        isPinned: { type: "boolean" },
+        createdAt: { type: "string", format: "date-time" },
+        category: {
+            type: "object",
+            nullable: true,
+            properties: {
+                id: { type: "string", format: "uuid" },
+                name: { type: "string" },
+                slug: { type: "string" },
+            },
+        },
+        author: {
+            type: "object",
+            nullable: true,
+            properties: {
+                id: { type: "string", format: "uuid" },
+                username: { type: "string" },
+                avatarUrl: { type: "string", nullable: true },
+            },
+        },
+        media: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    id: { type: "string", format: "uuid" },
+                    mediaUrl: { type: "string" },
+                    mediaType: { type: "string", enum: ["image", "video"] },
+                    sortOrder: { type: "integer" },
+                },
+            },
+        },
+    },
+};
+
+// Mirrors the raw "posts" table row returned by articleModel.js
+// (articleRoutes currently reads/writes the same underlying table as posts).
+const articleComponent = {
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid" },
+        user_id: { type: "string", format: "uuid", nullable: true },
+        content: { type: "string", nullable: true },
+        created_at: { type: "string", format: "date-time" },
+        category_id: { type: "string", format: "uuid", nullable: true },
+        is_pinned: { type: "boolean" },
+    },
+};
+
 const options = {
     definition: {
         openapi: "3.0.0",
@@ -88,6 +143,8 @@ const options = {
                 UpdateUserInput: updateUserInputComponent,
                 PaginatedUsersResponse: paginatedUsersResponseComponent,
                 ErrorResponse: errorResponseComponent,
+                Post: postComponent,
+                Article: articleComponent,
             },
         },
     },
