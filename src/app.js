@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express from "express";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./docs/swagger.js";
 import articleRoutes from "./routes/articleRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
@@ -12,6 +14,9 @@ app.use(express.json());
 
 // Root route
 app.get("/", (_, res) => res.json({ info: "TemanTumbuh Backend API" }));
+
+// API docs
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
 app.use("/articles", articleRoutes);
