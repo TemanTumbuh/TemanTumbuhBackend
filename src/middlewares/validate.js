@@ -3,7 +3,11 @@
  * Response error mengikuti bentuk standar: { error, message, details[] }.
  */
 const validate = (schema, source = "body") => (req, res, next) => {
-    const result = schema.safeParse(req[source]);
+    // multipart/form-data tanpa field sama sekali membuat req.body jadi undefined
+    // (bukan {}) - perlakukan sebagai objek kosong supaya validasi tidak salah
+    // menganggapnya "body hilang" alih-alih "body ada tapi semua field kosong".
+    const input = source === "body" && req.body === undefined ? {} : req[source];
+    const result = schema.safeParse(input);
 
     if (!result.success) {
         return res.status(400).json({

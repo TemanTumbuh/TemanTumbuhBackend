@@ -19,6 +19,47 @@ class UserModel {
     return data;
   }
 
+  // Cari user berdasarkan (provider, provider_id) - dipakai oleh Google SSO callback.
+  static async findByProviderAndProviderId(provider, providerId) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("provider", provider)
+      .eq("provider_id", providerId)
+      .single();
+
+    if (error && error.code !== "PGRST116") {
+      throw error;
+    }
+
+    return data;
+  }
+
+  // Cek apakah username sudah dipakai (dipakai saat generate username unik untuk Google SSO).
+  static async usernameExists(username) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("id")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (error) throw error;
+    return !!data;
+  }
+
+  // Cari user berdasarkan ID, termasuk password_hash/provider (dipakai internal oleh authService).
+  static async findById(id) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error && error.code === "PGRST116") return null;
+    if (error) throw error;
+    return data;
+  }
+
   // Buat user baru
   static async create(userData) {
     const { data, error } = await supabase

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./docs/swagger.js";
 import articleRoutes from "./routes/articleRoutes.js";
@@ -11,6 +12,7 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // Root route
 app.get("/", (_, res) => res.json({ info: "TemanTumbuh Backend API" }));
