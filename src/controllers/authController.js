@@ -6,10 +6,10 @@ class AuthController {
   // Register user
   static async register(req, res) {
     try {
-      const { nama_pengguna, email, kata_sandi, ulangi_kata_sandi } = req.body;
+      const { username, email, kata_sandi, ulangi_kata_sandi } = req.body;
 
       // Validasi input
-      if (!nama_pengguna || !email || !kata_sandi || !ulangi_kata_sandi) {
+      if (!username || !email || !kata_sandi || !ulangi_kata_sandi) {
         return res.status(400).json({ error: "Semua field harus diisi" });
       }
 
@@ -29,7 +29,7 @@ class AuthController {
 
       // Buat user baru
       const newUser = await UserModel.create({
-        nama_pengguna,
+        username,
         email,
         password_hash,
       });
@@ -43,7 +43,7 @@ class AuthController {
 
       res.status(201).json({
         message: "Registrasi berhasil",
-        user: { id: newUser.id, nama_pengguna: newUser.nama_pengguna, email: newUser.email },
+        user: { id: newUser.id, username: newUser.username, email: newUser.email },
         token,
       });
     } catch (error) {
@@ -74,6 +74,9 @@ class AuthController {
         return res.status(401).json({ error: "Email atau kata sandi salah" });
       }
 
+      // Update last_login
+      await UserModel.updateLastLogin(user.id);
+
       // Buat JWT token
       const token = jwt.sign(
         { id: user.id, email: user.email },
@@ -83,7 +86,7 @@ class AuthController {
 
       res.json({
         message: "Login berhasil",
-        user: { id: user.id, nama_pengguna: user.nama_pengguna, email: user.email },
+        user: { id: user.id, username: user.username, email: user.email },
         token,
       });
     } catch (error) {
