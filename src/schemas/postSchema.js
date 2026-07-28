@@ -49,4 +49,9 @@ const updatePostSchema = z.object({
     categoryId: categoryIdInputSchema,
 });
 
-export { listPostsQuerySchema, postIdParamSchema, createPostSchema, updatePostSchema };
+// ---- POST /api/v1/posts/:id/comments ----
+const createCommentSchema = z.object({
+    content: z.string().min(1, "Komentar tidak boleh kosong.").max(1000, "Komentar maksimal 1000 karakter."),
+});
+
+export { listPostsQuerySchema, postIdParamSchema, createPostSchema, updatePostSchema, createCommentSchema };

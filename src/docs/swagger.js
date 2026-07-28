@@ -100,6 +100,48 @@ const postComponent = {
                 },
             },
         },
+        likesCount: { type: "integer", example: 0 },
+        commentsCount: { type: "integer", example: 0 },
+    },
+};
+
+// Mirrors CommentService.createComment() response.
+const commentComponent = {
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid" },
+        content: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
+        parentId: { type: "string", format: "uuid", nullable: true },
+        author: {
+            type: "object",
+            nullable: true,
+            properties: {
+                id: { type: "string", format: "uuid" },
+                username: { type: "string" },
+                avatarUrl: { type: "string", nullable: true },
+            },
+        },
+    },
+};
+
+// Mirrors LikeService.toggleLike() response.
+const likeResponseComponent = {
+    type: "object",
+    properties: {
+        liked: { type: "boolean" },
+        likesCount: { type: "integer" },
+    },
+};
+
+const paginatedCommentsResponseComponent = {
+    type: "object",
+    properties: {
+        comments: {
+            type: "array",
+            items: { $ref: "#/components/schemas/Comment" },
+        },
+        nextCursor: { type: "string", format: "uuid", nullable: true },
     },
 };
 
@@ -145,6 +187,37 @@ const options = {
                 ErrorResponse: errorResponseComponent,
                 Post: postComponent,
                 Article: articleComponent,
+                Comment: commentComponent,
+                LikeResponse: likeResponseComponent,
+                PaginatedCommentsResponse: paginatedCommentsResponseComponent,
+                RealtimeConfig: {
+                    type: "object",
+                    properties: {
+                        supabaseUrl: { type: "string", format: "uri", description: "Supabase URL untuk koneksi Realtime" },
+                        supabaseKey: { type: "string", description: "Supabase anon key untuk koneksi Realtime" },
+                        channels: {
+                            type: "object",
+                            properties: {
+                                likes: {
+                                    type: "object",
+                                    properties: {
+                                        table: { type: "string", example: "likes" },
+                                        events: { type: "array", items: { type: "string" }, example: ["INSERT", "DELETE"] },
+                                        broadcast: { type: "boolean", example: true },
+                                    },
+                                },
+                                comments: {
+                                    type: "object",
+                                    properties: {
+                                        table: { type: "string", example: "comments" },
+                                        events: { type: "array", items: { type: "string" }, example: ["INSERT", "DELETE"] },
+                                        broadcast: { type: "boolean", example: true },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
         },
     },

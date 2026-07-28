@@ -48,6 +48,8 @@ function formatPost(row) {
                 mediaType: m.media_type,
                 sortOrder: m.sort_order,
             })),
+        likesCount: row.likes?.[0]?.count ?? 0,
+        commentsCount: row.comments?.[0]?.count ?? 0,
     };
 }
 

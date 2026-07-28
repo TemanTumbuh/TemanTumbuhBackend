@@ -2,7 +2,7 @@ import supabase from "../config/supabase.js";
 
 const PostModel = {
     // Ambil semua post dengan cursor-based pagination.
-    // Join: users (author), post_media (array).
+    // Join: users (author), post_media (array), like & comment counts via embedded count.
     async getAll({ limit = 20, cursor = null, categoryId = null } = {}) {
         // Resolve cursor timestamp SEBELUM membangun query utama
         let cursorTimestamp = null;
@@ -32,7 +32,9 @@ const PostModel = {
         user_id,
         categories ( id, name, slug ),
         users!posts_user_id_fkey ( id, username, avatar_url ),
-        post_media ( id, media_url, media_type, sort_order )
+        post_media ( id, media_url, media_type, sort_order ),
+        likes:likes(count),
+        comments:comments(count)
       `
             )
             .order("created_at", { ascending: false })
@@ -65,7 +67,9 @@ const PostModel = {
         user_id,
         categories ( id, name, slug ),
         users!posts_user_id_fkey ( id, username, avatar_url ),
-        post_media ( id, media_url, media_type, sort_order )
+        post_media ( id, media_url, media_type, sort_order ),
+        likes:likes(count),
+        comments:comments(count)
       `
             )
             .eq("id", id)
