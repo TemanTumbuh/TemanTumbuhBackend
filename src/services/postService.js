@@ -1,5 +1,7 @@
 import PostModel from "../models/postModel.js";
 import MediaService from "./mediaService.js";
+import PERMISSIONS from "../constants/permissions.js";
+import { can } from "../utils/rbac.js";
 
 // Mapping raw DB row → camelCase JSON
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -82,8 +84,8 @@ const PostService = {
     },
 
     // TEMAN-31: DELETE post.
-    // - Owner bisa hapus miliknya sendiri.
-    // - Admin bisa hapus semua.
+    // - Owner bisa hapus miliknya sendiri (posts:delete:own).
+    // - Pemegang posts:delete:any bisa hapus semua.
     async deletePost(id, reqUser) {
         const post = await PostModel.getById(id);
         if (!post) {
@@ -93,9 +95,10 @@ const PostService = {
         }
 
         const isOwner = post.user_id === reqUser.id;
-        const isAdmin = reqUser.role === "admin";
+        const allowed =
+            (isOwner && can(reqUser, PERMISSIONS.POSTS_DELETE_OWN)) || can(reqUser, PERMISSIONS.POSTS_DELETE_ANY);
 
-        if (!isOwner && !isAdmin) {
+        if (!allowed) {
             const err = new Error("Tidak diizinkan menghapus post ini.");
             err.status = 403;
             throw err;
@@ -124,7 +127,7 @@ const PostService = {
             throw err;
         }
 
-        if (post.user_id !== reqUser.id) {
+        if (post.user_id !== reqUser.id || !can(reqUser, PERMISSIONS.POSTS_UPDATE_OWN)) {
             const err = new Error("Tidak diizinkan mengubah post ini.");
             err.status = 403;
             throw err;

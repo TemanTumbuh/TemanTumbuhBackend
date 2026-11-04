@@ -1,8 +1,12 @@
 import express from "express";
 import UserController from "../controllers/userController.js";
-import authenticate from "../middlewares/authenticate.js";
+import authenticate, { optionalAuthenticate } from "../middlewares/authenticate.js";
+import authorize from "../middlewares/authorize.js";
+import RoleController from "../controllers/roleController.js";
+import PERMISSIONS from "../constants/permissions.js";
 import validate from "../middlewares/validate.js";
 import { updateUserSchema, userIdParamSchema, getUsersQuerySchema } from "../schemas/userSchema.js";
+import { assignRoleSchema } from "../schemas/roleSchema.js";
 
 const router = express.Router();
 
@@ -46,7 +50,8 @@ const router = express.Router();
  *             schema: { $ref: '#/components/schemas/ErrorResponse' }
  */
 // GET /api/users
-router.get("/", validate(getUsersQuerySchema, "query"), UserController.getAll);
+// optionalAuthenticate: tetap publik, tapi pemegang users:read:inactive ikut melihat user non-aktif.
+router.get("/", optionalAuthenticate, validate(getUsersQuerySchema, "query"), UserController.getAll);
 
 /**
  * @swagger
@@ -155,5 +160,50 @@ router.patch(
  */
 // DELETE /api/users/:id
 router.delete("/:id", authenticate, validate(userIdParamSchema, "params"), UserController.remove);
+
+/**
+ * @swagger
+ * /api/users/{id}/role:
+ *   put:
+ *     summary: Ubah role seorang user
+ *     description: Butuh permission `users:assign_role`. Superadmin terakhir tidak dapat diturunkan.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [role_id]
+ *             properties:
+ *               role_id: { type: integer, example: 2 }
+ *     responses:
+ *       200:
+ *         description: Role user diubah
+ *       401:
+ *         description: Missing or invalid token
+ *       403:
+ *         description: Tidak punya permission users:assign_role
+ *       404:
+ *         description: User atau role tidak ditemukan
+ *       409:
+ *         description: Tidak dapat menurunkan superadmin terakhir
+ */
+// PUT /api/users/:id/role
+router.put(
+    "/:id/role",
+    authenticate,
+    authorize(PERMISSIONS.USERS_ASSIGN_ROLE),
+    validate(userIdParamSchema, "params"),
+    validate(assignRoleSchema, "body"),
+    RoleController.assignToUser
+);
 
 export default router;

@@ -1,9 +1,13 @@
 import UserModel from "../models/userModel.js";
+import RbacService from "./rbacService.js";
+import PERMISSIONS from "../constants/permissions.js";
+import { can } from "../utils/rbac.js";
 
 const ALLOWED_SEARCH_BY = ["username", "email"];
 const ALLOWED_ORDER_BY = ["created_at", "username", "email", "last_login"];
 const SELF_PATCHABLE_FIELDS = ["username", "bio", "avatar_url", "place_id"];
-const ADMIN_ONLY_FIELDS = ["is_active", "role_id"];
+// is_active butuh permission users:manage_status. role_id TIDAK diubah lewat PATCH ini,
+// gunakan PUT /api/users/:id/role (permission users:assign_role).
 
 // Mapping raw DB row -> response JSON (password_hash tidak pernah disertakan)
 function formatUser(row) {
@@ -57,6 +61,7 @@ const UserService = {
                 email,
                 password_hash,
                 provider: "local",
+                role_id: await RbacService.getDefaultRoleId(),
             });
             return user;
         } catch (error) {
@@ -80,6 +85,7 @@ const UserService = {
                 provider: "google",
                 provider_id: providerId,
                 avatar_url: avatarUrl ?? null,
+                role_id: await RbacService.getDefaultRoleId(),
             });
             return user;
         } catch (error) {
@@ -132,7 +138,7 @@ const UserService = {
     },
 
     // PATCH /api/users/:id - partial update, hanya field yang diizinkan.
-    // Hanya pemilik akun atau admin yang boleh mengubah.
+    // Pemilik akun (users:update:own) atau pemegang users:update:any yang boleh mengubah.
     async updateUser(id, body, reqUser) {
         const existing = await UserModel.getById(id);
         if (!existing) {
@@ -142,8 +148,9 @@ const UserService = {
         }
 
         const isOwner = reqUser?.id === id;
-        const isAdmin = reqUser?.role === "admin";
-        if (!isOwner && !isAdmin) {
+        const allowed =
+            (isOwner && can(reqUser, PERMISSIONS.USERS_UPDATE_OWN)) || can(reqUser, PERMISSIONS.USERS_UPDATE_ANY);
+        if (!allowed) {
             const err = new Error("Tidak diizinkan mengubah user ini.");
             err.status = 403;
             throw err;
@@ -153,11 +160,8 @@ const UserService = {
         for (const key of SELF_PATCHABLE_FIELDS) {
             if (body[key] !== undefined) fields[key] = body[key];
         }
-        // is_active dan role_id: admin-only (role_id belum punya tabel sumber kebenaran, ditahan sampai ROLES table ada)
-        if (isAdmin) {
-            for (const key of ADMIN_ONLY_FIELDS) {
-                if (body[key] !== undefined) fields[key] = body[key];
-            }
+        if (body.is_active !== undefined && can(reqUser, PERMISSIONS.USERS_MANAGE_STATUS)) {
+            fields.is_active = body.is_active;
         }
 
         if (fields.username !== undefined) {
@@ -187,7 +191,7 @@ const UserService = {
     },
 
     // DELETE /api/users/:id - hard delete, cascade ditangani DB.
-    // Hanya pemilik akun atau admin yang boleh menghapus.
+    // Pemilik akun (users:delete:own) atau pemegang users:delete:any yang boleh menghapus.
     async deleteUser(id, reqUser) {
         const existing = await UserModel.getById(id);
         if (!existing) {
@@ -197,8 +201,9 @@ const UserService = {
         }
 
         const isOwner = reqUser?.id === id;
-        const isAdmin = reqUser?.role === "admin";
-        if (!isOwner && !isAdmin) {
+        const allowed =
+            (isOwner && can(reqUser, PERMISSIONS.USERS_DELETE_OWN)) || can(reqUser, PERMISSIONS.USERS_DELETE_ANY);
+        if (!allowed) {
             const err = new Error("Tidak diizinkan menghapus user ini.");
             err.status = 403;
             throw err;

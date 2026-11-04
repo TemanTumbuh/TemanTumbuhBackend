@@ -1,4 +1,6 @@
 import CommentModel from "../models/commentModel.js";
+import PERMISSIONS from "../constants/permissions.js";
+import { can } from "../utils/rbac.js";
 
 const CommentService = {
     async getComments(postId, { limit, cursor } = {}) {
@@ -75,9 +77,10 @@ const CommentService = {
         }
 
         const isOwner = comment.user_id === reqUser.id;
-        const isAdmin = reqUser.role === "admin";
+        const allowed =
+            (isOwner && can(reqUser, PERMISSIONS.COMMENTS_DELETE_OWN)) || can(reqUser, PERMISSIONS.COMMENTS_DELETE_ANY);
 
-        if (!isOwner && !isAdmin) {
+        if (!allowed) {
             const err = new Error("Tidak diizinkan menghapus komentar ini.");
             err.status = 403;
             throw err;

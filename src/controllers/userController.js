@@ -1,11 +1,13 @@
 import UserService from "../services/userService.js";
+import PERMISSIONS from "../constants/permissions.js";
+import { can } from "../utils/rbac.js";
 
 const UserController = {
     // GET /api/users
     async getAll(req, res) {
         try {
             const { page, limit, order, orderBy, search, searchBy } = req.query;
-            const isAdmin = req.user?.role === "admin";
+            const canSeeInactive = can(req.user, PERMISSIONS.USERS_READ_INACTIVE);
             const result = await UserService.listUsers({
                 page,
                 limit,
@@ -13,7 +15,7 @@ const UserController = {
                 orderBy,
                 search,
                 searchBy,
-                includeInactive: isAdmin,
+                includeInactive: canSeeInactive,
             });
             return res.status(200).json(result);
         } catch (err) {

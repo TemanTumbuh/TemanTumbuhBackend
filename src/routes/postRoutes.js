@@ -3,6 +3,8 @@ import PostController from "../controllers/postController.js";
 import LikeController from "../controllers/likeController.js";
 import CommentController from "../controllers/commentController.js";
 import authenticate from "../middlewares/authenticate.js";
+import authorize from "../middlewares/authorize.js";
+import PERMISSIONS from "../constants/permissions.js";
 import upload from "../middlewares/upload.js";
 import validate from "../middlewares/validate.js";
 import { listPostsQuerySchema, postIdParamSchema, createPostSchema, updatePostSchema, createCommentSchema } from "../schemas/postSchema.js";
@@ -162,6 +164,7 @@ router.delete("/:id", authenticate, validate(postIdParamSchema, "params"), PostC
 router.post(
     "/",
     authenticate,
+    authorize(PERMISSIONS.POSTS_CREATE),
     (req, res, next) => {
         upload.array("images", 3)(req, res, (err) => {
             if (!err) return next();
@@ -272,7 +275,13 @@ router.patch(
  *       404:
  *         description: Post not found
  */
-router.post("/:id/like", authenticate, validate(postIdParamSchema, "params"), LikeController.toggle);
+router.post(
+    "/:id/like",
+    authenticate,
+    authorize(PERMISSIONS.LIKES_TOGGLE),
+    validate(postIdParamSchema, "params"),
+    LikeController.toggle
+);
 
 /**
  * @swagger
@@ -410,6 +419,7 @@ router.get("/:id/comments", validate(postIdParamSchema, "params"), CommentContro
 router.post(
     "/:id/comments",
     authenticate,
+    authorize(PERMISSIONS.COMMENTS_CREATE),
     validate(postIdParamSchema, "params"),
     validate(createCommentSchema, "body"),
     CommentController.create
