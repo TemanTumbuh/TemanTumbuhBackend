@@ -105,6 +105,17 @@ const postComponent = {
     },
 };
 
+// Mirrors formatCategory() in categoryService.js.
+const categoryComponent = {
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid" },
+        name: { type: "string" },
+        slug: { type: "string" },
+        isActive: { type: "boolean" },
+    },
+};
+
 // Mirrors CommentService.createComment() response.
 const commentComponent = {
     type: "object",
@@ -172,6 +183,7 @@ const options = {
                 PaginatedUsersResponse: paginatedUsersResponseComponent,
                 ErrorResponse: errorResponseComponent,
                 Post: postComponent,
+                Category: categoryComponent,
                 Comment: commentComponent,
                 LikeResponse: likeResponseComponent,
                 PaginatedCommentsResponse: paginatedCommentsResponseComponent,

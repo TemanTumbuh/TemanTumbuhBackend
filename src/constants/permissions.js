@@ -13,6 +13,10 @@ const PERMISSIONS = Object.freeze({
 
     LIKES_TOGGLE: "likes:toggle",
 
+    CATEGORIES_CREATE: "categories:create",
+    CATEGORIES_UPDATE: "categories:update",
+    CATEGORIES_DELETE: "categories:delete",
+
     USERS_READ_INACTIVE: "users:read:inactive",
     USERS_UPDATE_OWN: "users:update:own",
     USERS_UPDATE_ANY: "users:update:any",

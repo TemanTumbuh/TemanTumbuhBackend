@@ -7,6 +7,7 @@ import swaggerSpec from "./docs/swagger.js";
 import authRoutes from "./routes/authRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
 import roleRoutes from "./routes/roleRoutes.js";
 import realtimeRoutes from "./routes/realtimeRoutes.js";
 
@@ -54,6 +55,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routes
 app.use("/auth", authRoutes);
 app.use("/api/v1/posts", postRoutes);
+app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/realtime", realtimeRoutes);

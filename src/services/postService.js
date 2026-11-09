@@ -1,4 +1,5 @@
 import PostModel from "../models/postModel.js";
+import CategoryService from "./categoryService.js";
 import MediaService from "./mediaService.js";
 import PERMISSIONS from "../constants/permissions.js";
 import { can } from "../utils/rbac.js";
@@ -142,6 +143,7 @@ const PostService = {
         }
 
         const cleanCategoryId = categoryId !== undefined ? formatCategoryId(categoryId) : undefined;
+        if (cleanCategoryId) await CategoryService.assertUsable(cleanCategoryId);
         await PostModel.update(id, { content, categoryId: cleanCategoryId });
         return this.getPostById(id);
     },
@@ -158,8 +160,8 @@ const PostService = {
             err.status = 400;
             throw err;
         }
-
         const cleanCategoryId = formatCategoryId(categoryId);
+        if (cleanCategoryId) await CategoryService.assertUsable(cleanCategoryId);
 
         // Buat post dulu
         const newPost = await PostModel.create({
