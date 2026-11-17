@@ -4,17 +4,18 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./docs/swagger.js";
-import articleRoutes from "./routes/articleRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import roleRoutes from "./routes/roleRoutes.js";
 import realtimeRoutes from "./routes/realtimeRoutes.js";
 
 const app = express();
 
 // ---------- CORS ----------
 // CORS_ORIGINS di .env:
-//   "*"                      -> semua situs boleh mengakses
+//   "*"                           -> semua situs boleh mengakses
 //   "https://a.com,https://b.com" -> hanya situs yang di-whitelist
 const allowedOrigins = (process.env.CORS_ORIGINS || "*")
     .split(",")
@@ -52,10 +53,11 @@ app.get("/", (_, res) => res.json({ info: "TemanTumbuh Backend API" }));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Routes
-app.use("/articles", articleRoutes);
 app.use("/auth", authRoutes);
 app.use("/api/v1/posts", postRoutes);
+app.use("/api/v1/categories", categoryRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/roles", roleRoutes);
 app.use("/api/realtime", realtimeRoutes);
 
 // Global error handler (harus 4 argumen)

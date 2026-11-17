@@ -105,6 +105,17 @@ const postComponent = {
     },
 };
 
+// Mirrors formatCategory() in categoryService.js.
+const categoryComponent = {
+    type: "object",
+    properties: {
+        id: { type: "string", format: "uuid" },
+        name: { type: "string" },
+        slug: { type: "string" },
+        isActive: { type: "boolean" },
+    },
+};
+
 // Mirrors CommentService.createComment() response.
 const commentComponent = {
     type: "object",
@@ -145,20 +156,6 @@ const paginatedCommentsResponseComponent = {
     },
 };
 
-// Mirrors the raw "posts" table row returned by articleModel.js
-// (articleRoutes currently reads/writes the same underlying table as posts).
-const articleComponent = {
-    type: "object",
-    properties: {
-        id: { type: "string", format: "uuid" },
-        user_id: { type: "string", format: "uuid", nullable: true },
-        content: { type: "string", nullable: true },
-        created_at: { type: "string", format: "date-time" },
-        category_id: { type: "string", format: "uuid", nullable: true },
-        is_pinned: { type: "boolean" },
-    },
-};
-
 const options = {
     definition: {
         openapi: "3.0.0",
@@ -186,7 +183,7 @@ const options = {
                 PaginatedUsersResponse: paginatedUsersResponseComponent,
                 ErrorResponse: errorResponseComponent,
                 Post: postComponent,
-                Article: articleComponent,
+                Category: categoryComponent,
                 Comment: commentComponent,
                 LikeResponse: likeResponseComponent,
                 PaginatedCommentsResponse: paginatedCommentsResponseComponent,
