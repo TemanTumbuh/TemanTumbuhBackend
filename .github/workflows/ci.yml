@@ -1,0 +1,81 @@
+name: CI
+
+# Dinonaktifkan atas arahan tim DevOps: workflow ini TIDAK lagi berjalan
+# otomatis saat push maupun pull request. Masih bisa dijalankan manual dari
+# tab Actions → CI → "Run workflow".
+#
+# Untuk mengaktifkan kembali, ganti blok `on:` di bawah menjadi:
+#   on:
+#     push:
+#       branches: [dev, staging, main]
+#     pull_request:
+#       branches: [dev, staging, main]
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` (bukan `npm install`) memasang persis sesuai package-lock.json
+      # dan gagal bila lockfile tidak sinkron dengan package.json.
+      - name: Install dependencies
+        run: npm ci
+
+      # Hanya dependency yang ikut ke production. Gagal bila ada celah
+      # high/critical, supaya tidak ada yang lolos ke server tanpa disadari.
+      - name: Audit dependency production
+        run: npm audit --omit=dev --audit-level=high
+
+      # Menyalakan server lalu memastikan ia merespons. Menangkap error yang
+      # baru muncul saat runtime — mis. paket yang di-import tapi tidak
+      # terdaftar di package.json (kasus `cors`), atau syntax error.
+      #
+      # Semua nilai env di bawah PALSU: hanya untuk melewati validasi env saat
+      # startup. Supabase/R2/Google tidak dihubungi selama server sekadar
+      # menyala, jadi tidak perlu (dan jangan) memakai secret asli di sini.
+      - name: Smoke test — server bisa menyala
+        env:
+          PORT: 4000
+          JWT_SECRET: ci-placeholder
+          DATABASE_URL: https://ci-placeholder.supabase.co
+          DATABASE_KEY: ci-placeholder
+          GOOGLE_CLIENT_ID: ci-placeholder
+          GOOGLE_CLIENT_SECRET: ci-placeholder
+          GOOGLE_CALLBACK_URL: http://localhost:4000/auth/callback
+          OAUTH_STATE_SECRET: ci-placeholder
+          R2_ACCOUNT_ID: ci-placeholder
+          R2_ACCESS_KEY_ID: ci-placeholder
+          R2_SECRET_ACCESS_KEY: ci-placeholder
+          R2_BUCKET_NAME: ci-placeholder
+          R2_PUBLIC_URL: https://ci-placeholder.r2.dev
+        run: |
+          npm start > server.log 2>&1 &
+
+          for i in $(seq 1 20); do
+            if curl -sf -o /dev/null http://localhost:4000/api-docs/; then
+              echo "Server merespons setelah ${i} detik."
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Server tidak merespons dalam 20 detik. Log:"
+          cat server.log
+          exit 1
