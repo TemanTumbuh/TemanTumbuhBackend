@@ -29,8 +29,8 @@ npm start
 
 ## CI
 
-Setiap push / pull request ke `dev`, `staging`, dan `main` menjalankan
-`.github/workflows/ci.yml`:
+`.github/workflows/ci.yml` tidak berjalan otomatis (atas arahan tim DevOps).
+Jalankan manual dari tab **Actions → CI → Run workflow**. Isinya:
 
 1. `npm ci`
 2. `npm audit --omit=dev --audit-level=high` — gagal bila ada celah
